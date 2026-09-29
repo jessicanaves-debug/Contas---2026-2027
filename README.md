@@ -24,13 +24,12 @@ Células **amarelas com texto azul** são as que você edita. O resto é fórmul
 
 ## Como o dashboard atualiza
 
-**Com Google Sheets (automático):**
-1. Suba `Contas_2026_2027.xlsx` no Google Drive → abrir com Planilhas Google → *Arquivo → Salvar como Planilhas Google*.
-2. No Sheets: *Arquivo → Compartilhar → Publicar na Web* → Documento inteiro → **Microsoft Excel (.xlsx)** → Publicar. Copie o link.
-3. No dashboard, clique em **Google Sheets**, cole o link e clique em **Conectar**.
+A planilha oficial fica no **Google Sheets**:
+https://docs.google.com/spreadsheets/d/1OQJjkpmbjfMfUSEHpQCG0ciSFLo_9DL7vxVV5VmzIWg/edit
 
-A partir daí é só editar o Sheets e recarregar o dashboard (o Google leva alguns minutos para atualizar a versão publicada).
+O `index.html` já lê essa planilha sozinho: edite o Sheets e recarregue o dashboard.
+Para funcionar, o compartilhamento do Sheets precisa continuar como **"Qualquer pessoa com o link"**.
 
-**Com o arquivo .xlsx:** clique em **Carregar arquivo** (ou arraste o arquivo para a página).
+O arquivo `Contas_2026_2027.xlsx` deste repositório é só a versão inicial (backup). Também dá para carregar um .xlsx no botão **Carregar arquivo**.
 
 **GitHub Pages:** em *Settings → Pages*, escolha a branch `main` e a pasta `/ (root)`. O dashboard fica em `https://jessicanaves-debug.github.io/Contas---2026-2027/`. Atenção: o repositório é público, então os valores ficam visíveis para quem tiver o link.
