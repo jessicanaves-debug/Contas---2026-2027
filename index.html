@@ -128,6 +128,14 @@ tr.tot td{font-weight:600;border-bottom:none}
 .bar-mini i{display:block;height:100%;border-radius:3px}
 .person{display:grid;gap:4px;padding:12px 0;border-bottom:1px solid var(--grid)}
 .person:last-child{border-bottom:none}
+.inc-head{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;justify-content:space-between}
+.inc{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:14px}
+.inc-item{background:var(--surface-2);border-radius:12px;padding:12px 14px;display:grid;gap:3px}
+.inc-item .who{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+.inc-item .amt{font:500 20px var(--mono);font-variant-numeric:tabular-nums}
+.inc-item .det{font-size:12px;color:var(--ink-3)}
+.split{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden;margin-top:14px}
+.split i{display:block;height:100%}
 .person .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .person .nm{font-weight:600}
 .small{font-size:12.5px;color:var(--ink-3)}
@@ -185,6 +193,15 @@ footer{color:var(--ink-3);font-size:12.5px}
       <div class="legend" id="envLegend"></div>
       <div class="kpis" id="kpis"></div>
     </div>
+  </section>
+
+  <section class="card" aria-labelledby="incTitle">
+    <div class="inc-head">
+      <div><h2 id="incTitle">Entradas do mês</h2><div class="sub" id="incSub"></div></div>
+      <div class="small" id="incYear"></div>
+    </div>
+    <div class="split" id="incSplit" role="img"></div>
+    <div class="inc" id="incItems"></div>
   </section>
 
   <section class="grid2">
@@ -286,6 +303,8 @@ function parse(wb){
   const fixas=[]; for(let i=4;i<FX.length;i++){ const r=FX[i]; if(!r[0] || String(r[0]).toUpperCase().startsWith("TOTAL")) continue; fixas.push({nome:String(r[0]),cat:r[1]||"",obs:r[2]||"",v:k=>n(r[mcol[k]])}); }
   const CA = rows(wb,"Cartão"); const cardRow = i => ({nome:String(CA[i][0]||""), v:k=>n(CA[i][mcol[k]])});
   const card = {jOld:cardRow(4),pOld:cardRow(5),jNew:cardRow(6),pNew:cardRow(7)};
+  const RC = rows(wb,"Receitas"); const rrow = i => k => n((RC[i]||[])[mcol[k]]);
+  const rec = {jess:rrow(4), pedro:rrow(5), bonusRec:rrow(6), bonusUsado:rrow(7), outras:rrow(8), bonusGuard:rrow(9)};
   const ME = rows(wb,"Mercado & Alelo"); const merc = {orc:k=>n(ME[4][mcol[k]]), alelo:k=>n(ME[5][mcol[k]])};
   const PV = rows(wb,"Provisões"); const prov=[];
   for(let i=4;i<12;i++){ const r=PV[i]||[]; if(!r[0]) continue; prov.push({nome:String(r[0]),valor:n(r[1]),venc:toMonth(r[2]),ini:toMonth(r[3]),mes:n(r[5]),obs:String(r[6]||"")}); }
@@ -295,7 +314,7 @@ function parse(wb){
   for(let i=4;i<CC.length;i++){ const r=CC[i]||[]; if(r[3]==null||r[3]==="") continue; compras.push({desc:r[1]||"",quem:r[2]||"",total:n(r[3]),parc:n(r[4]),ini:toMonth(r[5]),vp:n(r[6]),fim:toMonth(r[7])}); }
   const CF = rows(wb,"Config"); const cfg={guardar:n(CF[4]?.[1]),reserva:n(CF[5]?.[1]),livre:n(CF[6]?.[1]),alerta:n(CF[7]?.[1])||.7};
   if(!months.length) throw new Error("Nenhum mês encontrado na aba Resumo");
-  return {months,fixas,card,merc,prov,metas,compras,cfg,missing};
+  return {months,fixas,card,merc,prov,metas,compras,cfg,missing,rec};
 }
 
 function statusOf(m){
@@ -493,9 +512,27 @@ function renderInsights(){
   $("insights").innerHTML=out.map(([c,i,t])=>`<li><span class="ic ${c}">${i}</span><span>${t}</span></li>`).join("");
 }
 
+function renderIncome(){
+  const m=S.months[sel], k=m.key, R=S.rec;
+  const j=R.jess(k), p=R.pedro(k), bu=Math.min(R.bonusRec(k),R.bonusUsado(k)), bg=R.bonusGuard(k), br=R.bonusRec(k), o=R.outras(k);
+  const tot=j+p+bu+o;
+  const items=[
+    ["Salário Jessica", j, "--s-fixas", tot? pct(j/tot)+" do que entra":""],
+    ["Salário Pedro", p, "--s-cartao", tot? pct(p/tot)+" do que entra":""],
+    ["Bônus nas contas", bu, "--s-guardar", br>0? `recebido ${brl0(br)} · guardado ${brl0(bg)}` : "sem bônus neste mês"],
+    ["Outras entradas", o, "--s-reserva", o>0? "freelas, vendas…" : "nenhuma"],
+  ];
+  $("incSub").textContent=`${mlabel(m.mo)} · total para as contas ${brl(tot)}`;
+  const yr=S.months.reduce((a,x)=>({j:a.j+R.jess(x.key),p:a.p+R.pedro(x.key),b:a.b+R.bonusRec(x.key)}),{j:0,p:0,b:0});
+  $("incYear").innerHTML=`Out/26 a dez/27: Jessica <b class="num">${brl0(yr.j)}</b> · Pedro <b class="num">${brl0(yr.p)}</b> · bônus <b class="num">${brl0(yr.b)}</b>`;
+  $("incSplit").innerHTML=items.filter(x=>x[1]>0).map(x=>`<i data-tip="${x[0]}|${brl(x[1])}|${x[3]}" style="flex:${x[1]} 0 0;background:var(${x[2]})"></i>`).join("");
+  $("incSplit").setAttribute("aria-label",items.map(x=>`${x[0]} ${brl(x[1])}`).join(", "));
+  $("incItems").innerHTML=items.map(x=>`<div class="inc-item"><div class="who"><i class="sw" style="background:var(${x[2]})"></i>${x[0]}</div><div class="amt">${brl(x[1])}</div><div class="det">${x[3]}</div></div>`).join("");
+}
+
 function renderAll(full=true){
   if(full) renderMonths(); else S.months.forEach((m,i)=>$("m"+i)?.setAttribute("aria-pressed",i===sel));
-  renderHero(); renderMonthsChart(); renderSaldo(); renderCard(); renderGoal(); renderTables(); renderInsights();
+  renderHero(); renderIncome(); renderMonthsChart(); renderSaldo(); renderCard(); renderGoal(); renderTables(); renderInsights();
 }
 
 function load(buf,label){
